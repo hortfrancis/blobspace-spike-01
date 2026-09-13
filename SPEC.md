@@ -30,15 +30,19 @@ answered first and with the least code possible.
 
 ## Built from
 
-- `../threejs-experiments-01/05-drifting-speech` — the camera, the figure,
-  movement, and speech as decaying single characters.
-- `../threejs-experiments-01/06-interaction` — proximity, prompts, the
-  interactable registry, box collision.
-- `../discord-app-experiments-01` — the Embedded App SDK handshake, the OAuth
-  token exchange, and a Worker that serves client and API from one origin.
+- `../../experiments/threejs-experiments-01/05-drifting-speech` — the camera,
+  the figure, movement, and speech as decaying single characters.
+- `../../experiments/discord-app-experiments-01` — the Embedded App SDK
+  handshake, the OAuth token exchange, and a Worker that serves the client and
+  the API from one origin.
 
-Both Three.js experiments already contain the same scene setup, figure and
-movement loop, copied verbatim. Here they move into `src/` and are shared.
+`04-speech-bubbles` and `05-drifting-speech` contain the same scene setup,
+figure and movement loop, copied verbatim. Here they move into `src/` and are
+shared.
+
+A third experiment, `06-interaction` — proximity, prompts, an interactable
+registry, box collision — is on another machine and not pushed. Only step five
+wants it, and step five is optional and last.
 
 ## Architecture
 
@@ -81,11 +85,14 @@ alternative costs weeks. If people later cheat by teleporting, that is a problem
 for a version that has something worth cheating at.
 
 Speech is never stored. It decays in about four seconds, so there is no history
-to replay and a joiner needs none. The roster lives in memory and may be lost on
-eviction. Clients re-announce themselves, and that is the whole recovery story.
+to replay and a joiner needs none.
 
 Use the WebSocket Hibernation API, so an idle room costs nothing while people
-leave the tab open.
+leave the tab open. Hibernation drops the object from memory as a matter of
+course rather than as bad luck, so the roster cannot just live in a variable.
+Attach each socket's `{ id, name, avatar }` with `serializeAttachment` and
+rebuild the roster from `state.getWebSockets()` on wake. Positions need no such
+care: the next frame carries them.
 
 ### Identity
 
@@ -111,11 +118,11 @@ fixed tick, around 15 per second, carrying its current position and any
 characters typed since the last frame.
 
 ```js
-// client → room, on a tick, and only when something changed
+// client → room, on a tick, when moving or speaking
 {
   t: "frame",
-  p: [x, z, yaw],                      // omitted if unmoved
-  s: [{ c: "h", dt: 0 }, { c: "i", dt: 120 }]   // omitted if silent
+  p: [x, z, yaw],                      // every tick while moving
+  s: [{ c: "h", dt: 340 }, { c: "i", dt: 120 }] // omitted if silent
 }
 
 // room → everyone else, with the sender stamped on by the server
@@ -129,11 +136,21 @@ characters typed since the last frame.
 { t: "left", id }
 ```
 
-`dt` is the milliseconds between one character and the last. That field is the
-whole reason this design exists. Send a batched string and every character in it
-arrives at once, the trail spawns as a solid block, and the hesitation that made
-the sentence feel spoken is destroyed. Carrying the gaps lets the receiving
-client replay the typing at its original rhythm.
+`dt` is the milliseconds since the previous character this client spoke, counted
+across frames and not within one. The first character of a frame is therefore
+not `dt: 0`; it carries the real gap since the last character of the frame
+before, which is usually longer than a tick and is precisely where a hesitation
+lands. Only the first character of a session has nothing to measure from.
+
+That field is the whole reason this design exists. Send a batched string and
+every character in it arrives at once, the trail spawns as a solid block, and
+the hesitation that made the sentence feel spoken is destroyed. Carrying the
+gaps lets the receiving client replay the typing at its original rhythm.
+
+`p` goes in every tick while the player is moving, and one final frame is sent
+when they stop. Sending it only when it changes is tempting and wrong: the
+receiver would have no way to tell a player who has stopped from a packet that
+is late, and starting and stopping is most of what walking around a room is.
 
 Remote players are therefore rendered on a delay of about 100 to 150
 milliseconds. That buffer does two jobs: it gives batched characters room to be
@@ -141,11 +158,16 @@ spread back out at their real spacing, and it lets positions be interpolated
 between the last two snapshots instead of teleporting on each one. This is what
 makes other people look like they are moving rather than updating.
 
-## Two things in the existing code that break when shared
+## What the existing code does not survive unchanged
 
-Both experiments enable `OrbitControls`, and drifting speech computes its
-direction from the local camera. Two people at different camera angles would see
-the same sentence laid out differently. Lock the camera for the spike.
+`05` enables `OrbitControls`, and drifting speech computes its direction from
+the local camera. Two people at different camera angles would see the same
+sentence laid out differently. Lock the camera for the spike.
+
+That fixes the direction but not the spacing. Each new glyph is placed off the
+edge of the one before it, at wherever that one has drifted to by now, so
+spacing is a function of local frame timing and will differ slightly from
+viewer to viewer. Accepted: it reads as a different hand, not different words.
 
 The glyph cap is a single global limit of 400. It becomes a per-speaker limit.
 
@@ -162,9 +184,10 @@ Each step answers a question, and each is throwaway if the answer is no.
    interpolation, make it feel like a room.
 4. **Speech, with timing.** Characters cross the network with their gaps intact.
    Two people can talk. This is the payoff.
-5. **Optional: one shared object.** A lamp from `06` that anyone can press ENTER
-   on, and that everyone sees turn on. It proves world state syncs as well as
-   people do, and it is nearly free once the relay exists.
+5. **Optional: one shared object.** A lamp that anyone can press ENTER on, and
+   that everyone sees turn on. It proves world state syncs as well as people
+   do. Cheap once the relay exists, but it needs `06` pushed first, or the
+   interaction written again from nothing.
 
 Stop after any step that answers its question badly.
 
@@ -178,9 +201,14 @@ collision between players, mobile, more than about eight people in a room.
 
 - **WebSockets through the Discord proxy.** Requests from the iframe generally
   need a `/.proxy/` prefix and a URL mapping in the developer portal. Whether a
-  long-lived `wss://` connection survives that path is step one.
-- **Keyboard focus inside the iframe.** The speech mechanic needs every printable
-  key and the arrow keys. Discord's client may want some of them.
+  long-lived `wss://` connection survives that path is step one. The thing to
+  falsify is `wss://${location.host}/.proxy/ws`.
+- **Keyboard focus inside the iframe.** `05` calls `preventDefault()` on every
+  printable key and on Backspace. Discord's client wants some of those. Free to
+  check at step one, since a page is loading in the iframe anyway.
+- **A DOM overlay in the iframe.** Speech is not Three.js geometry. Every
+  character is a real element, positioned and recoloured each frame through
+  `CSS2DObject`, and that layer has never run inside Discord.
 - **Instance sharing.** Confirm that two people launching the Activity in the
   same voice channel really do report the same `instanceId`.
 - **Testing at all.** Multiplayer needs a second Discord account or a willing
