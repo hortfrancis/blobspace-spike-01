@@ -28,10 +28,17 @@ Surprises, dead ends, anything the spec got wrong. Newest first.
   and the Worker sees the path as plain `/ws`.
 - Held open for 130 s in Discord on the web, in Chrome, round trip around 44 ms.
   The SDK still reports `platform: desktop` there, so it cannot tell web from
-  the desktop app, and the app itself is untested. The heartbeat
-  was meant to be every 5 s but a bug sent one every second, so the socket was
-  never idle. Whether an idle socket survives is still open, and it matters: a
-  player standing still and silent sends nothing.
+  the desktop app, and the app itself is untested.
+- Idle sockets survive. A script left sockets completely silent for 1, 2, 4, 8
+  and 10 minutes, through both `discordsays.com/.proxy/ws` and `workers.dev`, and
+  every one still echoed afterwards. A player standing still needs no keepalive.
+  The proxy accepts a script's connection without the iframe, which is what made
+  this testable from outside Discord.
+- Hibernated sockets did not answer a Close frame, despite the compatibility date
+  being past `web_socket_auto_reply_to_close`. Clients hung, and the proxy turned
+  it into `1006`. `webSocketClose` now replies by hand, mapping 1005 to 1000,
+  since a bare `socket.close()` arrives as 1005 and is not a legal code to send.
+  Closes are clean through both hosts. Step two's `left` goes in that handler.
 - `instanceId` looks like `i-<instance>-gc-<guild>-<channel>`. Only one account
   so far, so two people sharing it is unconfirmed.
 - Typing with `preventDefault()` on printable keys and Backspace reaches the
