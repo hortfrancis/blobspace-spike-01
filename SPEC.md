@@ -30,19 +30,24 @@ answered first and with the least code possible.
 
 ## Built from
 
-- `../../experiments/threejs-experiments-01/05-drifting-speech` — the camera,
-  the figure, movement, and speech as decaying single characters.
+- `../../experiments/threejs-experiments-01/experiments/05-drifting-speech` —
+  the camera, the figure, movement, and speech as decaying single characters.
 - `../../experiments/discord-app-experiments-01` — the Embedded App SDK
   handshake, the OAuth token exchange, and a Worker that serves the client and
   the API from one origin.
+- `../../experiments/cf-durable-objects-experiments-01` — a Worker routing to a
+  Durable Object with `getByName`, WebSockets accepted through the Hibernation
+  API, and a broadcast that skips the sender. It has one hard-coded object and
+  keeps its state in `ctx.storage`, where this spike wants one object per
+  instance and no storage at all.
 
 `04-speech-bubbles` and `05-drifting-speech` contain the same scene setup,
 figure and movement loop, copied verbatim. Here they move into `src/` and are
 shared.
 
 A third experiment, `06-interaction` — proximity, prompts, an interactable
-registry, box collision — is on another machine and not pushed. Only step five
-wants it, and step five is optional and last.
+registry, box collision — sits beside them. Only step five wants it, and step
+five is optional and last.
 
 ## Architecture
 
@@ -186,8 +191,8 @@ Each step answers a question, and each is throwaway if the answer is no.
    Two people can talk. This is the payoff.
 5. **Optional: one shared object.** A lamp that anyone can press ENTER on, and
    that everyone sees turn on. It proves world state syncs as well as people
-   do. Cheap once the relay exists, but it needs `06` pushed first, or the
-   interaction written again from nothing.
+   do. Cheap once the relay exists: `06` already has the lamp, so the work is
+   syncing its state, not writing the interaction.
 
 Stop after any step that answers its question badly.
 

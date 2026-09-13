@@ -16,7 +16,7 @@ Verdicts: `—` not started · `yes` · `no` · `partly, see log`
 
 `dt` counts across frames · `p` every tick while moving, plus a stop frame ·
 roster rebuilt from `serializeAttachment` · glyph spacing varies per viewer,
-accepted · `06` not pushed, so step five is not free.
+accepted · `06` is pushed and has the lamp, so step five is cheap.
 
 ## Log
 
