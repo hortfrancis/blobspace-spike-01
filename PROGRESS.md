@@ -5,7 +5,7 @@ Each step is a question. Record the verdict, not the work. Stop at any **no**.
 | # | Step | Question | Verdict |
 | --- | --- | --- | --- |
 | 1 | Echo socket in Discord | Does `wss://` survive the proxy? | yes |
-| 2 | Presence | Two dots, moving, feels shared? | — |
+| 2 | Presence | Two dots, moving, feels shared? | yes |
 | 3 | The real world | Figure + interpolation, reads as a room? | — |
 | 4 | Speech with timing | Do the gaps survive the network? | — |
 | 5 | Shared lamp (optional) | Does world state sync like people do? | — |
@@ -21,6 +21,25 @@ accepted · `06` is pushed and has the lamp, so step five is cheap.
 ## Log
 
 Surprises, dead ends, anything the spec got wrong. Newest first.
+
+### 2026-09-14 · step two
+
+- Built on 05's floor and locked camera rather than a flat plane, so the dots
+  are spheres with a nose and a name label. Four tabs blobbing about reads as a
+  shared room. Remote dots ease towards their last position; the buffered
+  interpolation is still step three's.
+- An Activity inside Discord and a plain Chrome tab given `?room=<instanceId>`
+  land in the same room and see each other. That is the cheap way to have
+  company in Discord until there is a second account to test with.
+- `instanceId` is new on each launch of the Activity, so the room is too.
+- A player standing still sends nothing, so the spec's "positions need no such
+  care" was wrong for late arrivals. Each socket's attachment now carries its
+  last `p` as well as its name, and `hello` hands those out.
+- No identity yet: the room assigns ids and everyone is a guest. The OAuth
+  ticket has to land before real people test inside Discord.
+- Step three is deferred. The spheres are pleasant enough to talk over, and
+  speech with timing is the more interesting question, so step four goes next
+  on dots.
 
 ### 2026-09-14 · step one
 
