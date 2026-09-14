@@ -3,6 +3,7 @@ import { DiscordSDK } from "@discord/embedded-app-sdk";
 import { scene, camera, render, onFrame, GRID, TILE } from "./world.js";
 import { createDot } from "./dot.js";
 import { createSpeaker } from "./speech.js";
+import { lamp } from "./lamp.js";
 import { joinRoom } from "./room.js";
 
 const CLIENT_ID = import.meta.env.VITE_DISCORD_CLIENT_ID;
@@ -84,6 +85,18 @@ window.addEventListener("keydown", (event) => {
   // Leave browser, OS and Discord shortcuts alone.
   if (event.ctrlKey || event.metaKey || event.altKey) return;
 
+  // Enter uses the lamp, when it is in reach.
+  if (event.key === "Enter") {
+    event.preventDefault();
+    if (!event.repeat && lamp.inReach(position)) {
+      // Change it here at once, so it feels immediate, then ask the room. The
+      // room's answer comes back to us too and has the final say.
+      lamp.set(!lamp.on);
+      room?.send({ t: "lamp", on: lamp.on });
+    }
+    return;
+  }
+
   // You cannot unsay a word, and Backspace would otherwise navigate back.
   if (event.key === "Backspace") {
     event.preventDefault();
@@ -115,6 +128,8 @@ function moveLocal(delta) {
   position.addScaledVector(velocity, delta);
   position.x = THREE.MathUtils.clamp(position.x, -LIMIT, LIMIT);
   position.z = THREE.MathUtils.clamp(position.z, -LIMIT, LIMIT);
+  // Move first, then push back out of the lamp, so walking into it slides.
+  lamp.pushOut(position);
 
   if (velocity.length() > 0.05) {
     yaw = turnTowards(yaw, Math.atan2(velocity.x, velocity.z), TURN_RATE * delta);
@@ -229,6 +244,7 @@ function onMessage(message) {
       mySpeaker = createSpeaker(me);
       scene.add(me);
       for (const peer of message.peers) addRemote(peer);
+      lamp.set(message.world.lamp);
       // Tell everyone where we are standing, even if we never move.
       room.send({ t: "frame", p: currentPosition() });
       break;
@@ -243,6 +259,9 @@ function onMessage(message) {
       if (message.s) hear(remote, message.s);
       break;
     }
+    case "lamp":
+      lamp.set(message.on);
+      break;
     case "left":
       removeRemote(message.id);
       break;
@@ -297,6 +316,7 @@ onFrame((time) => {
   timer.update(time);
   const delta = Math.min(timer.getDelta(), 0.1);
   moveLocal(delta);
+  lamp.update(position, delta);
   mySpeaker?.update(delta);
   updateRemotes(delta, performance.now());
   render();

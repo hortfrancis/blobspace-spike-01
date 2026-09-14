@@ -1,8 +1,12 @@
 import { DurableObject } from "cloudflare:workers";
 
-// One room per Discord Activity instance. It is a relay, not a simulation: it
-// remembers who is here and where they last stood, so a late arrival can be
-// told, and forwards everything else. Speech is never stored.
+// One room per Discord Activity instance. For people it is a relay, not a
+// simulation: it remembers who is here and where they last stood, so a late
+// arrival can be told, and forwards everything else. Speech is never stored.
+//
+// For the world it is the authority. Two people can reach for the lamp at
+// once, so the room decides what state it is in and tells everyone, and keeps
+// that state in storage, since hibernation would otherwise forget it.
 export class Room extends DurableObject {
   async fetch(request) {
     const name = (new URL(request.url).searchParams.get("name") ?? "").trim().slice(0, 32) || "guest";
@@ -23,7 +27,9 @@ export class Room extends DurableObject {
       .map((ws) => ws.deserializeAttachment())
       .filter(Boolean);
 
-    server.send(JSON.stringify({ t: "hello", you: me.id, peers }));
+    const world = { lamp: (await this.ctx.storage.get("lamp")) ?? false };
+
+    server.send(JSON.stringify({ t: "hello", you: me.id, peers, world }));
     this.broadcast({ t: "joined", id: me.id, name: me.name }, server);
 
     return new Response(null, { status: 101, webSocket: client });
@@ -31,21 +37,32 @@ export class Room extends DurableObject {
 
   async webSocketMessage(ws, message) {
     if (typeof message !== "string") return;
-    let frame;
+    let parsed;
     try {
-      frame = JSON.parse(message);
+      parsed = JSON.parse(message);
     } catch {
       return;
     }
-    if (frame?.t !== "frame") return;
+
+    const me = ws.deserializeAttachment();
+
+    // A request for the lamp to be on or off. Asking for a state rather than a
+    // flip means two people pressing at once to turn it on leaves it on. Sent
+    // back to the asker as well, so every tab ends on the room's answer.
+    if (parsed?.t === "lamp") {
+      if (typeof parsed.on !== "boolean") return;
+      await this.ctx.storage.put("lamp", parsed.on);
+      this.broadcast({ t: "lamp", on: parsed.on, by: me.id });
+      return;
+    }
+
+    if (parsed?.t !== "frame") return;
 
     // A frame carries a position while moving, speech while talking, or both.
     // Whichever part is malformed is dropped on its own.
-    const p = isPosition(frame.p) ? frame.p : undefined;
-    const s = isSpeech(frame.s) ? frame.s : undefined;
+    const p = isPosition(parsed.p) ? parsed.p : undefined;
+    const s = isSpeech(parsed.s) ? parsed.s : undefined;
     if (!p && !s) return;
-
-    const me = ws.deserializeAttachment();
 
     // A player standing still sends nothing, so the last position has to be
     // kept for anyone who joins while they stand there.

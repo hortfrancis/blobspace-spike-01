@@ -29,6 +29,33 @@
         white-space: pre;
       }
 
+      /* The prompt over the lamp when it is in reach, from 06. */
+      .prompt {
+        display: flex;
+        align-items: center;
+        gap: 7px;
+        padding: 5px 11px 5px 5px;
+        background: #101014;
+        border-radius: 999px;
+        font: 600 12px/1 system-ui, sans-serif;
+        color: #fff;
+        white-space: nowrap;
+      }
+
+      .key {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 20px;
+        height: 20px;
+        padding-bottom: 1px;
+        background: #fff;
+        border-radius: 5px;
+        font-size: 14px;
+        line-height: 1;
+        color: #101014;
+      }
+
       #status, #hint {
         position: fixed;
         left: 16px;
@@ -42,7 +69,7 @@
   </head>
   <body>
     <p id="status">booting</p>
-    <p id="hint">Arrow keys to walk. Type to speak, and there is no backspace. Open this page in another tab to add a second person.</p>
+    <p id="hint">Arrow keys to walk. Type to speak, and there is no backspace. Enter by the lamp to switch it. Open this page in another tab to add a second person.</p>
     <script type="module" src="/src/main.js"></script>
   </body>
 </html>
