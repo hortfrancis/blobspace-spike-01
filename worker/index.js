@@ -1,24 +1,89 @@
 import { DurableObject } from "cloudflare:workers";
 
-// Step one: a room that does nothing but echo. It answers whether a socket can
-// be held open through Discord's proxy, and how many sockets share an instance.
+// One room per Discord Activity instance. It is a relay, not a simulation: it
+// remembers who is here and where they last stood, so a late arrival can be
+// told, and forwards everything else.
 export class Room extends DurableObject {
-  async fetch() {
+  async fetch(request) {
+    const name = (new URL(request.url).searchParams.get("name") ?? "").trim().slice(0, 32) || "guest";
     const [client, server] = Object.values(new WebSocketPair());
+
     // The Hibernation API: the runtime holds the socket while the object sleeps.
     this.ctx.acceptWebSocket(server);
+
+    // Hibernation empties memory, so each player's details live on their own
+    // socket and the roster is rebuilt from getWebSockets() whenever needed.
+    // Until Discord identity arrives, the room assigns the id itself.
+    const me = { id: crypto.randomUUID(), name, p: null };
+    server.serializeAttachment(me);
+
+    const peers = this.ctx
+      .getWebSockets()
+      .filter((ws) => ws !== server)
+      .map((ws) => ws.deserializeAttachment())
+      .filter(Boolean);
+
+    server.send(JSON.stringify({ t: "hello", you: me.id, peers }));
+    this.broadcast({ t: "joined", id: me.id, name: me.name }, server);
+
     return new Response(null, { status: 101, webSocket: client });
   }
 
   async webSocketMessage(ws, message) {
-    ws.send(
-      JSON.stringify({
-        t: "echo",
-        of: String(message),
-        sockets: this.ctx.getWebSockets().length,
-      }),
-    );
+    if (typeof message !== "string") return;
+    let frame;
+    try {
+      frame = JSON.parse(message);
+    } catch {
+      return;
+    }
+    if (frame?.t !== "frame" || !isPosition(frame.p)) return;
+
+    // A player standing still sends nothing, so the last position has to be
+    // kept for anyone who joins while they stand there.
+    const me = ws.deserializeAttachment();
+    me.p = frame.p;
+    ws.serializeAttachment(me);
+
+    this.broadcast({ t: "frame", id: me.id, p: me.p }, ws);
   }
+
+  // Deployed with compatibility date 2026-09-11, a hibernated socket got no
+  // reply to its Close frame: clients waited, and Discord's proxy gave up with
+  // 1006. web_socket_auto_reply_to_close did not cover it, so reply by hand.
+  // 1005, 1006 and 1015 describe a close but may not be sent in one, and a
+  // bare socket.close() in the browser arrives here as 1005.
+  async webSocketClose(ws, code, reason) {
+    ws.close([1005, 1006, 1015].includes(code) ? 1000 : code, reason);
+    this.leave(ws);
+  }
+
+  async webSocketError(ws) {
+    this.leave(ws);
+  }
+
+  // Can run twice for one socket, after an error and then a close. Clients
+  // ignore a `left` for someone they have already removed.
+  leave(ws) {
+    const me = ws.deserializeAttachment();
+    if (me) this.broadcast({ t: "left", id: me.id }, ws);
+  }
+
+  broadcast(message, except) {
+    const json = JSON.stringify(message);
+    for (const ws of this.ctx.getWebSockets()) {
+      if (ws === except) continue;
+      try {
+        ws.send(json);
+      } catch {
+        // Already closing. Its own close event will tidy it up.
+      }
+    }
+  }
+}
+
+function isPosition(p) {
+  return Array.isArray(p) && p.length === 3 && p.every(Number.isFinite);
 }
 
 export default {

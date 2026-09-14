@@ -3,54 +3,37 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Blobspace: echo</title>
+    <title>Blobspace</title>
     <style>
-      body {
+      html, body { margin: 0; height: 100%; background: #faf6ef; overflow: hidden; }
+      canvas { display: block; }
+
+      /* The CSS2D layer sits over the canvas and must not eat clicks. */
+      #labels { position: absolute; top: 0; left: 0; pointer-events: none; }
+
+      .name {
+        font: 600 13px/1 system-ui, sans-serif;
+        color: #2a2620;
+        background: rgb(255 255 255 / 0.75);
+        padding: 3px 6px;
+        border-radius: 4px;
+        white-space: nowrap;
+      }
+
+      #status, #hint {
+        position: fixed;
+        left: 16px;
         margin: 0;
-        padding: 16px;
-        background: #16161d;
-        color: #ddd;
-        font: 14px/1.4 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+        font: 500 14px/1.3 system-ui, sans-serif;
+        color: #9a9081;
       }
-      h1 {
-        margin: 0 0 12px;
-        font-size: 16px;
-      }
-      #status.open { color: #7ddc8a; }
-      #status.closed { color: #ff8a80; }
-      dl {
-        display: grid;
-        grid-template-columns: max-content 1fr;
-        gap: 2px 16px;
-        margin: 12px 0;
-      }
-      dt { color: #888; }
-      dd { margin: 0; }
-      .controls { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; }
-      #typed { min-height: 1.4em; color: #fff; }
-      #typed::after { content: "▏"; color: #888; }
-      #log { margin-top: 12px; white-space: pre-wrap; color: #aaa; }
+      #status { top: 16px; }
+      #hint { bottom: 16px; }
     </style>
   </head>
   <body>
-    <h1>Blobspace · step one: echo</h1>
-    <div id="status">booting</div>
-    <dl>
-      <dt>room</dt><dd id="room">—</dd>
-      <dt>socket url</dt><dd id="url">—</dd>
-      <dt>open for</dt><dd id="uptime">—</dd>
-      <dt>echoes</dt><dd id="echoes">0</dd>
-      <dt>last rtt</dt><dd id="rtt">—</dd>
-      <dt>sockets in room</dt><dd id="sockets">—</dd>
-    </dl>
-    <div class="controls">
-      <label><input id="heartbeat" type="checkbox" checked /> heartbeat every 5 s</label>
-      <label><input id="swallow" type="checkbox" checked /> swallow keys like 05</label>
-      <button id="reconnect" type="button" hidden>reconnect</button>
-    </div>
-    <p>Type anywhere, Enter to send it through the socket:</p>
-    <div id="typed"></div>
-    <div id="log"></div>
+    <p id="status">booting</p>
+    <p id="hint">Arrow keys to walk. Open this page in another tab to add a second person.</p>
     <script type="module" src="/src/main.js"></script>
   </body>
 </html>
