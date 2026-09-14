@@ -7,7 +7,7 @@ Each step is a question. Record the verdict, not the work. Stop at any **no**.
 | 1 | Echo socket in Discord | Does `wss://` survive the proxy? | yes |
 | 2 | Presence | Two dots, moving, feels shared? | yes |
 | 3 | The real world | Figure + interpolation, reads as a room? | — |
-| 4 | Speech with timing | Do the gaps survive the network? | — |
+| 4 | Speech with timing | Do the gaps survive the network? | yes |
 | 5 | Shared lamp (optional) | Does world state sync like people do? | — |
 
 Verdicts: `—` not started · `yes` · `no` · `partly, see log`
@@ -21,6 +21,25 @@ accepted · `06` is pushed and has the lamp, so step five is cheap.
 ## Log
 
 Surprises, dead ends, anything the spec got wrong. Newest first.
+
+### 2026-09-14 · step four
+
+- The gaps survive. A browser test typed "hello world" with hesitations of
+  0.65 s and 1.4 s and recorded when each glyph appeared in a second tab.
+  Every gap matched to within one of the test browser's frames: a mean error
+  of 18 to 27 ms locally and 23 ms through the deployed Worker, worst 70 ms,
+  with frames 50 to 100 ms apart in software rendering. A real browser draws
+  far more often, so the error should shrink with it.
+- In Discord it reads as speech: an Activity and two plain tabs in one
+  instance, "Hello, blobs!" drifting away the same way in each.
+- Gaps are measured from `event.timeStamp`, when the key went down, not from
+  when the handler ran. The listener plays each character its gap after the
+  one before, but never sooner than 150 ms from now, so a batch spreads back
+  out and a long pause collapses to the delay instead of piling up lag.
+- A frame carries `p`, `s` or both, and the room drops whichever part is
+  malformed on its own. Speaking never touches the stored position.
+- The glyph cap is 120 per speaker. Remote speech plays only once a dot has a
+  position, so it never spawns in the middle of the floor.
 
 ### 2026-09-14 · step two
 
