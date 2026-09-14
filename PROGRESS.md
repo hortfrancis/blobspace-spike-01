@@ -8,7 +8,7 @@ Each step is a question. Record the verdict, not the work. Stop at any **no**.
 | 2 | Presence | Two dots, moving, feels shared? | yes |
 | 3 | The real world | Figure + interpolation, reads as a room? | — |
 | 4 | Speech with timing | Do the gaps survive the network? | yes |
-| 5 | Shared lamp (optional) | Does world state sync like people do? | — |
+| 5 | Shared lamp (optional) | Does world state sync like people do? | yes |
 
 Verdicts: `—` not started · `yes` · `no` · `partly, see log`
 
@@ -21,6 +21,29 @@ accepted · `06` is pushed and has the lamp, so step five is cheap.
 ## Log
 
 Surprises, dead ends, anything the spec got wrong. Newest first.
+
+### 2026-09-14 · step five
+
+- It syncs, and it needed something people do not: an authority. Positions
+  and speech belong to whoever sends them, so the room only relays them. Two
+  people can reach for the lamp at once, so the room decides, stores the
+  state and tells everyone, the asker included.
+- Requests name the state wanted, not a flip. Two people turning it on at
+  once leaves it on; with a flip it would end up off.
+- The asker's lamp changes at once and the room's answer confirms it, so it
+  feels immediate. Simultaneous requests arrive in the same order everywhere,
+  so every tab settles on the same state.
+- The lamp is the one thing a room stores, in `ctx.storage`, because
+  hibernation empties memory. It outlives an empty room. Discord rooms are new
+  each session, so that only shows in plain tabs, where `local` remembers
+  its lamp indefinitely.
+- 06's prompt hid itself with `style.display`, which CSS2DRenderer in three
+  0.186 overwrites every frame, so an empty prompt showed in every tab. Hiding
+  through the object's `visible` holds.
+- Checked with a script driving the room (late arrivals, simultaneous and
+  malformed requests, an emptied room) and a browser test that walks a tab to
+  the lamp, locally, on `workers.dev` and through Discord's proxy, then in
+  Discord by hand.
 
 ### 2026-09-14 · step four
 
