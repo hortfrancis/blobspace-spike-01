@@ -2,7 +2,7 @@ import { DurableObject } from "cloudflare:workers";
 
 // One room per Discord Activity instance. It is a relay, not a simulation: it
 // remembers who is here and where they last stood, so a late arrival can be
-// told, and forwards everything else.
+// told, and forwards everything else. Speech is never stored.
 export class Room extends DurableObject {
   async fetch(request) {
     const name = (new URL(request.url).searchParams.get("name") ?? "").trim().slice(0, 32) || "guest";
@@ -37,15 +37,24 @@ export class Room extends DurableObject {
     } catch {
       return;
     }
-    if (frame?.t !== "frame" || !isPosition(frame.p)) return;
+    if (frame?.t !== "frame") return;
+
+    // A frame carries a position while moving, speech while talking, or both.
+    // Whichever part is malformed is dropped on its own.
+    const p = isPosition(frame.p) ? frame.p : undefined;
+    const s = isSpeech(frame.s) ? frame.s : undefined;
+    if (!p && !s) return;
+
+    const me = ws.deserializeAttachment();
 
     // A player standing still sends nothing, so the last position has to be
     // kept for anyone who joins while they stand there.
-    const me = ws.deserializeAttachment();
-    me.p = frame.p;
-    ws.serializeAttachment(me);
+    if (p) {
+      me.p = p;
+      ws.serializeAttachment(me);
+    }
 
-    this.broadcast({ t: "frame", id: me.id, p: me.p }, ws);
+    this.broadcast({ t: "frame", id: me.id, p, s }, ws);
   }
 
   // Deployed with compatibility date 2026-09-11, a hibernated socket got no
@@ -84,6 +93,24 @@ export class Room extends DurableObject {
 
 function isPosition(p) {
   return Array.isArray(p) && p.length === 3 && p.every(Number.isFinite);
+}
+
+// Characters with the milliseconds since the one before. The first character
+// of a session has nothing to measure from, so its gap is null. A frame covers
+// a fifteenth of a second, so 64 characters is far more than anyone can type.
+function isSpeech(s) {
+  return (
+    Array.isArray(s) &&
+    s.length > 0 &&
+    s.length <= 64 &&
+    s.every(
+      (item) =>
+        typeof item?.c === "string" &&
+        item.c.length > 0 &&
+        item.c.length <= 2 &&
+        (item.dt === null || (Number.isFinite(item.dt) && item.dt >= 0)),
+    )
+  );
 }
 
 export default {

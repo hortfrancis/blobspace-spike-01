@@ -20,6 +20,15 @@
         white-space: nowrap;
       }
 
+      /* One spoken character. The size is also in src/speech.js, which needs
+         it to space letters. */
+      .glyph {
+        display: block;
+        font: 600 22px/1 ui-monospace, SFMono-Regular, Menlo, monospace;
+        color: #101014;
+        white-space: pre;
+      }
+
       #status, #hint {
         position: fixed;
         left: 16px;
@@ -33,7 +42,7 @@
   </head>
   <body>
     <p id="status">booting</p>
-    <p id="hint">Arrow keys to walk. Open this page in another tab to add a second person.</p>
+    <p id="hint">Arrow keys to walk. Type to speak, and there is no backspace. Open this page in another tab to add a second person.</p>
     <script type="module" src="/src/main.js"></script>
   </body>
 </html>

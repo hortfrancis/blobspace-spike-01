@@ -71,6 +71,13 @@ function resize() {
 resize();
 window.addEventListener("resize", resize);
 
+// An orthographic camera fits a fixed number of world units to the window
+// height, which gives an exact conversion from pixels, and lets speech keep
+// the same letter spacing at any window size.
+export function worldPerPixel() {
+  return VIEW_SIZE / window.innerHeight;
+}
+
 export function render() {
   renderer.render(scene, camera);
   labelRenderer.render(scene, camera);
