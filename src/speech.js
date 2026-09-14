@@ -21,7 +21,7 @@ const LIFETIME = 4.5; // seconds from spoken to gone
 const RESTART = 0.9; // seconds of silence that end an utterance
 const TILT = 9; // degrees of random rotation per letter
 const SIZE = 22; // font size in pixels, matching .glyph in index.html
-const SPAWN_HEIGHT = 1.2; // above the speaker's feet, clear of the name label
+const SPAWN_HEIGHT = 0.6; // above the centre of the head it is anchored to
 const MAX_GLYPHS = 120; // per speaker, where 05 had one global cap
 
 const INK = new THREE.Color("#101014");

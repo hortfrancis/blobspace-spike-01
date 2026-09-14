@@ -63,6 +63,10 @@ export class Room extends DurableObject {
     const p = isPosition(parsed.p) ? parsed.p : undefined;
     const s = isSpeech(parsed.s) ? parsed.s : undefined;
     if (!p && !s) return;
+    // When the sender says the position was true, on its own clock. It only
+    // means anything beside a position, and listeners use it for nothing but
+    // spacing that player's walk.
+    const ts = p && Number.isFinite(parsed.ts) && parsed.ts >= 0 ? parsed.ts : undefined;
 
     // A player standing still sends nothing, so the last position has to be
     // kept for anyone who joins while they stand there.
@@ -71,7 +75,7 @@ export class Room extends DurableObject {
       ws.serializeAttachment(me);
     }
 
-    this.broadcast({ t: "frame", id: me.id, p, s }, ws);
+    this.broadcast({ t: "frame", id: me.id, p, ts, s }, ws);
   }
 
   // Deployed with compatibility date 2026-09-11, a hibernated socket got no
