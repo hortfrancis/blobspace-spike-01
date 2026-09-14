@@ -31,13 +31,19 @@ measurements and surprises, are in [PROGRESS.md](PROGRESS.md).
   `/ws` to a Durable Object per room, using the WebSocket Hibernation API.
 - **Config:** only the public Discord application ID, in `.env`. No secrets yet.
 
-```
-Browser: Discord iframe, or a plain tab
-  │  wss://<host>/.proxy/ws?room=<instanceId>&name=…     (/ws outside Discord)
-  ▼
-Worker · worker/index.js      serves dist/, routes /ws by room name
-  ▼
-Durable Object `Room`         roster on each socket, relays frames, owns the lamp
+```mermaid
+---
+config:
+  flowchart:
+    wrappingWidth: 300
+---
+flowchart TD
+  browser["<b>Browser</b><br/>Discord iframe<br/>or a plain tab"]
+  worker["<b>Worker</b><br/><i>worker/index.js</i><br/>serves dist/<br/>routes /ws by room"]
+  room["<b>Durable Object</b><br/><i>Room</i>, one per room<br/>roster on each socket<br/>relays frames<br/>owns the lamp"]
+
+  browser -- "<i>wss://host/.proxy/ws</i><br/><i>?room=instanceId</i><br/>(/ws outside Discord)" --> worker
+  worker --> room
 ```
 
 ## What is worth reusing
