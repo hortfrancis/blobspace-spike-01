@@ -127,18 +127,22 @@ characters typed since the last frame.
 {
   t: "frame",
   p: [x, z, yaw],                      // every tick while moving
+  ts: 81234,                           // sender's clock when p was true; only with p
   s: [{ c: "h", dt: 340 }, { c: "i", dt: 120 }] // omitted if silent
 }
 
 // room → everyone else, with the sender stamped on by the server
-{ t: "frame", id: "<discord user id>", p: [...], s: [...] }
+{ t: "frame", id: "<discord user id>", p: [...], ts, s: [...] }
 
 // room → one client, on join
-{ t: "hello", you: "<id>", peers: [{ id, name, avatar, p: [...] }] }
+{ t: "hello", you: "<id>", peers: [{ id, name, avatar, p: [...] }], world: { lamp: false } }
 
 // room → everyone
 { t: "joined", id, name, avatar }
 { t: "left", id }
+
+// step five: client → room, then room → everyone, the asker included
+{ t: "lamp", on: true }
 ```
 
 `dt` is the milliseconds since the previous character this client spoke, counted
@@ -162,6 +166,13 @@ milliseconds. That buffer does two jobs: it gives batched characters room to be
 spread back out at their real spacing, and it lets positions be interpolated
 between the last two snapshots instead of teleporting on each one. This is what
 makes other people look like they are moving rather than updating.
+
+Those snapshots are spaced by `ts`, not by when they arrive. Positions leave
+evenly, but the network delivers them unevenly, and spacing by arrival replays
+that unevenness as a stutter. A listener relates the sender's clock to its own
+by the quickest delivery it has seen, and the render delay absorbs anything
+slower. The sender, which only moves once per drawn frame, carries its position
+forward to the moment of sending for the same reason.
 
 ## What the existing code does not survive unchanged
 

@@ -6,7 +6,7 @@ Each step is a question. Record the verdict, not the work. Stop at any **no**.
 | --- | --- | --- | --- |
 | 1 | Echo socket in Discord | Does `wss://` survive the proxy? | yes |
 | 2 | Presence | Two dots, moving, feels shared? | yes |
-| 3 | The real world | Figure + interpolation, reads as a room? | — |
+| 3 | The real world | Figure + interpolation, reads as a room? | yes |
 | 4 | Speech with timing | Do the gaps survive the network? | yes |
 | 5 | Shared lamp (optional) | Does world state sync like people do? | yes |
 
@@ -21,6 +21,30 @@ accepted · `06` is pushed and has the lamp, so step five is cheap.
 ## Log
 
 Surprises, dead ends, anything the spec got wrong. Newest first.
+
+### 2026-09-14 · step three
+
+- Built last, once everything else had answered yes. 05's figure is a
+  template cloned per person, sharing geometry, with a shirt coloured by id.
+  Names hang below the feet so speech has the air above the head, and legs
+  swing with how fast a figure is drawn moving. `dot.js` stays, unused.
+- Remote players are drawn 150 ms behind, between the positions either side
+  of that moment. Speech replays on the same delay, so words come from where
+  the figure is drawn.
+- Two sources of stutter turned up, and both looked like bad ping:
+  - The sender's position moves once per drawn frame, but ticks run on their
+    own timer, so a slow tab sent the same position twice and then a double
+    step. The sender now carries its position forward to the moment of sending.
+  - Spacing positions by when they arrived replays network jitter: live,
+    positions sent 66 ms apart arrived 41 to 86 ms apart. Frames now carry
+    `ts`, the sender's clock when `p` was true, and listeners place positions
+    on that clock. The two clocks are related by the quickest delivery seen,
+    relaxing by 0.2 ms a position. The spec's wire now includes it.
+- Measured by reading, every frame, where a second tab drew the walker's label
+  and comparing it with where her positions put her: within about 1 px in
+  every run, locally and live. The clean live run walked at an even 93 to
+  116 px/s despite the jittery arrivals. Headless software rendering on this
+  machine was too starved for more clean live runs; smoother by eye in Chrome.
 
 ### 2026-09-14 · step five
 
